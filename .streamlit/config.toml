@@ -1,0 +1,17 @@
+# Streamlit theme tokens. This defines the app's default look as a proper
+# Streamlit theme (not CSS overrides), so every native widget -- selectbox,
+# slider, button, tabs, status, sidebar -- picks up matching colors
+# automatically instead of needing hand-written CSS per component.
+#
+# Streamlit still lets a viewer switch to its own Light/Dark theme from the
+# Settings menu; this is just the default shown on first load.
+[theme]
+base = "dark"
+primaryColor = "#7C9CFF"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#141C2E"
+textColor = "#E6ECFA"
+font = "sans serif"
+
+[server]
+runOnSave = true
