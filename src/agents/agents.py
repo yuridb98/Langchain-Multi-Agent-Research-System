@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 #Model Initialization
-llm = ChatOpenAI(model="gpt-5.5-nano", temperature=0)
+llm = ChatOpenAI(model="gpt-5.4-nano", temperature=0)
 
 def build_search_agent():
     return create_agent(

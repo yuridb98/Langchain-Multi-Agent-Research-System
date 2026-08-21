@@ -1,3 +1,5 @@
 from src.tools.tools import web_search, scrape_url
+from src.pipeline.pipeline import run_research_pipeline
 
-scrape_url.invoke("https://techcrunch.com/category/artificial-intelligence/")
+run_research_pipeline("The impact of AI on the job market in 2026")
+
