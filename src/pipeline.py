@@ -1,32 +1,25 @@
-"""The single research-pipeline implementation.
+"""The research pipeline: search -> read -> write -> critique.
 
-Previously this orchestration existed in two places -- here, and again
-inline inside app.py -- and had already drifted (the UI copy had a
-``"content "`` typo that silently broke the Reader step). Now both the
-Streamlit UI and the CLI (main.py) call ``run_research_pipeline`` directly.
-
-Per-agent models are resolved through ``config.models.resolve_model``, so
-even if a caller passes an unexpected model id, the pipeline runs with a
-safe, allowed default instead of raising.
+Both the Streamlit UI and the CLI call run_research_pipeline directly, so
+there's exactly one orchestration implementation.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from ..agents.agents import (
+from .agents import (
     build_critic_chain,
     build_reader_agent,
     build_search_agent,
     build_writer_chain,
+    make_llm,
 )
-from ..agents.llm import make_llm
-from ..config.models import AGENT_DEFAULTS, resolve_model
-from ..config.settings import WRITER_MAX_TOKENS
-from ..core.logging import get_logger, truncate
+from .config import AGENT_DEFAULTS, WRITER_MAX_TOKENS, resolve_model
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # (step, status) -- status is one of "running", "done", "error"
 EventCallback = Callable[[str, str], None]
@@ -60,23 +53,19 @@ def run_research_pipeline(
 ) -> ResearchResult:
     """Run the search -> read -> write -> critique pipeline for `topic`.
 
-    `models` maps agent name ("search", "reader", "writer", "critic") to a
-    requested model id; unknown/disallowed ids fall back to that agent's
-    default. Missing entries also use the default.
+    `models` maps agent name to a requested model id; unknown/disallowed ids
+    (or missing entries) fall back to that agent's default.
     """
     requested = models or {}
-    resolved = {
-        agent: resolve_model(agent, requested.get(agent)) for agent in AGENT_DEFAULTS
-    }
+    resolved = {agent: resolve_model(agent, requested.get(agent)) for agent in AGENT_DEFAULTS}
     result = ResearchResult(topic=topic, models=resolved)
 
-    logger.info("Starting pipeline topic=%s models=%s", truncate(topic, 200), resolved)
+    logger.info("Starting pipeline topic=%s models=%s", topic[:200], resolved)
 
     # ---- Step 1: search ----
     _emit(on_event, "search", "running")
     try:
-        search_llm = make_llm(resolved["search"], temperature)
-        search_agent = build_search_agent(search_llm)
+        search_agent = build_search_agent(make_llm(resolved["search"], temperature))
         search_response = search_agent.invoke(
             {
                 "messages": [
@@ -98,8 +87,7 @@ def run_research_pipeline(
     # ---- Step 2: reader ----
     _emit(on_event, "reader", "running")
     try:
-        reader_llm = make_llm(resolved["reader"], temperature)
-        reader_agent = build_reader_agent(reader_llm)
+        reader_agent = build_reader_agent(make_llm(resolved["reader"], temperature))
         reader_response = reader_agent.invoke(
             {
                 "messages": [
@@ -125,9 +113,7 @@ def run_research_pipeline(
     # ---- Step 3: writer ----
     _emit(on_event, "writer", "running")
     try:
-        writer_llm = make_llm(resolved["writer"], temperature).bind(
-            max_tokens=WRITER_MAX_TOKENS
-        )
+        writer_llm = make_llm(resolved["writer"], temperature).bind(max_tokens=WRITER_MAX_TOKENS)
         writer_chain = build_writer_chain(writer_llm)
         research_combined = (
             f"SEARCH RESULTS:\n{result.search}\n\n"
@@ -144,8 +130,7 @@ def run_research_pipeline(
     # ---- Step 4: critic ----
     _emit(on_event, "critic", "running")
     try:
-        critic_llm = make_llm(resolved["critic"], temperature)
-        critic_chain = build_critic_chain(critic_llm)
+        critic_chain = build_critic_chain(make_llm(resolved["critic"], temperature))
         result.feedback = critic_chain.invoke({"report": result.report})
         _emit(on_event, "critic", "done")
     except Exception as exc:

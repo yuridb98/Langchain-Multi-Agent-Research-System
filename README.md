@@ -7,32 +7,25 @@ A small multi-agent research assistant built on LangChain / LangGraph:
 3. **Writer Chain** — drafts a structured research report from the gathered material.
 4. **Critic Chain** — reviews and scores the report.
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a full breakdown of the design and the reasoning
+behind it.
+
 Available as a Streamlit UI (`app.py`) and a CLI (`main.py`), both built on the same
-`run_research_pipeline` implementation in `src/pipeline/pipeline.py`.
+`run_research_pipeline` implementation in `src/pipeline.py`.
 
 ## Project layout
 
 ```
-app.py                  # Streamlit UI (thin entrypoint)
-main.py                 # CLI entrypoint
+app.py              # Streamlit UI (thin entrypoint)
+main.py             # CLI entrypoint
 src/
-  config/
-    settings.py          # secret resolution (st.secrets -> env -> .env) + runtime limits
-    models.py             # allowlist of cheap models selectable per agent
-  core/
-    errors.py, logging.py
-  agents/
-    llm.py                # LLM client factory
-    prompts.py             # prompt templates
-    agents.py              # agent/chain builders
-  pipeline/
-    pipeline.py             # search -> read -> write -> critique orchestration
-  tools/
-    search.py                # Tavily web search tool
-    scraper.py                # URL scraping tool (with an SSRF guard)
-  ui/
-    theme.py, sidebar.py, views.py
-tests/                    # offline unit tests (no API keys required)
+  config.py          # secrets (st.secrets -> env -> .env), runtime limits, cheap-model allowlist
+  prompts.py          # prompt templates
+  agents.py            # LLM client factory + agent/chain builders
+  tools.py              # Tavily web search + URL scraping (with an SSRF guard)
+  pipeline.py            # search -> read -> write -> critique orchestration
+  ui.py                   # theme CSS + sidebar model controls + results rendering
+tests/               # offline unit tests (no API keys required)
 ```
 
 ## Setup
@@ -65,7 +58,7 @@ streamlit run app.py
 ```
 
 The sidebar lets you pick which model each of the four agents uses, from a fixed list of
-cheap/low-cost models — see `src/config/models.py`. This allowlist is enforced both in the UI
+cheap/low-cost models — see `src/config.py`. This allowlist is enforced both in the UI
 and inside the pipeline itself, so it can't be bypassed by tampering with client-side state.
 
 ## Deploying to Streamlit Community Cloud
@@ -79,7 +72,7 @@ TAVILY_API_KEY = "tvly-..."
 ```
 
 The app reads secrets via `st.secrets` first, falling back to environment variables /
-`.env` for local development — see `src/config/settings.py`.
+`.env` for local development — see `src/config.py`.
 
 ## Development
 
@@ -97,4 +90,4 @@ resolution, the scraper's SSRF guard, and the pipeline's error handling.
 Because this is typically deployed with the owner's own API keys, a few guardrails are built
 in: the model allowlist above, a per-session run limit, a max topic length, a bounded output
 size for the writer, and request timeouts/retries on all outbound calls. See
-`src/config/settings.py` for the tunable limits.
+`src/config.py` for the tunable limits.

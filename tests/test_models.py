@@ -1,4 +1,4 @@
-from src.config.models import (
+from src.config import (
     AGENT_DEFAULTS,
     ALLOWED_MODEL_IDS,
     CHEAP_MODELS,

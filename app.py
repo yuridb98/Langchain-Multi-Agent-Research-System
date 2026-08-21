@@ -1,23 +1,23 @@
 """Streamlit UI.
 
 Thin by design: page config + theme + a small amount of glue. All actual
-work happens in `src.pipeline.pipeline.run_research_pipeline`; all model
-selection lives in `src.ui.sidebar`; all result rendering lives in
-`src.ui.views`. That split is what let the CLI (main.py) and this app share
-one pipeline implementation instead of duplicating it.
+work happens in src.pipeline.run_research_pipeline; model selection and
+result rendering live in src.ui. That split is what lets the CLI (main.py)
+and this app share one pipeline implementation instead of duplicating it.
 """
 
 from __future__ import annotations
 
+import logging
+
 import streamlit as st
 
-from src.config.settings import MAX_RUNS_PER_SESSION, MAX_TOPIC_CHARS
-from src.core.errors import ConfigError
-from src.core.logging import get_logger
-from src.pipeline.pipeline import run_research_pipeline
-from src.ui import sidebar, theme, views
+from src import ui
+from src.config import MAX_RUNS_PER_SESSION, MAX_TOPIC_CHARS, ConfigError
+from src.pipeline import run_research_pipeline
 
-logger = get_logger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="Multi-Agent Research Assistant",
@@ -25,7 +25,7 @@ st.set_page_config(
     layout="wide",
 )
 
-theme.inject()
+ui.inject_theme()
 
 for key, default in (
     ("result", None),
@@ -34,14 +34,14 @@ for key, default in (
     if key not in st.session_state:
         st.session_state[key] = default
 
-theme.hero(
+ui.hero(
     "Researcher<span style='color:var(--primary-color)'>Agent</span>",
     "Four specialized AI agents collaborate — searching, scraping, writing, "
     "and critiquing — to deliver a research report on any topic.",
 )
 st.markdown("<hr class='app-divider' />", unsafe_allow_html=True)
 
-models, temperature = sidebar.render()
+models, temperature = ui.render_sidebar()
 
 EXAMPLE_TOPICS = [
     "Future of LLM agents in the tech industry",
@@ -76,20 +76,16 @@ if submitted:
         )
     else:
         st.session_state.run_count += 1
-        step_labels = views.STEP_LABELS
 
         try:
             with st.status("Running pipeline…", expanded=True) as status_box:
 
                 def on_event(step: str, status: str, box=status_box) -> None:
                     icon = {"running": "🔄", "done": "✅", "error": "❌"}.get(status, "•")
-                    box.write(f"{icon} {step_labels.get(step, step)}")
+                    box.write(f"{icon} {ui.STEP_LABELS.get(step, step)}")
 
                 result = run_research_pipeline(
-                    topic,
-                    models=models,
-                    temperature=temperature,
-                    on_event=on_event,
+                    topic, models=models, temperature=temperature, on_event=on_event
                 )
                 if result.ok:
                     status_box.update(label="Pipeline complete", state="complete")
@@ -108,6 +104,6 @@ if submitted:
 if st.session_state.result is not None:
     st.markdown("<hr class='app-divider' />", unsafe_allow_html=True)
     st.subheader("Results")
-    views.render_result(st.session_state.result)
+    ui.render_result(st.session_state.result)
 
 st.caption("ResearchAgent · Powered by a LangChain multi-agent pipeline · Built with Streamlit")

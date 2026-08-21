@@ -1,7 +1,7 @@
 import pytest
 
-from src.tools import scraper
-from src.tools.scraper import UnsafeUrlError, _assert_public_url, scrape_url
+from src import tools
+from src.tools import UnsafeUrlError, _assert_public_url, scrape_url
 
 
 @pytest.mark.parametrize(
@@ -44,8 +44,8 @@ def test_scrape_url_extracts_via_trafilatura(monkeypatch):
         is_redirect = False
         is_permanent_redirect = False
 
-    monkeypatch.setattr(scraper, "_assert_public_url", lambda url: None)
-    monkeypatch.setattr(scraper.requests, "get", lambda *a, **k: FakeResponse())
+    monkeypatch.setattr(tools, "_assert_public_url", lambda url: None)
+    monkeypatch.setattr(tools.requests, "get", lambda *a, **k: FakeResponse())
 
     result = scrape_url.invoke({"url": "http://example.com/article"})
     assert "Interesting article content" in result
@@ -54,12 +54,12 @@ def test_scrape_url_extracts_via_trafilatura(monkeypatch):
 def test_scrape_url_reports_timeout(monkeypatch):
     import requests
 
-    monkeypatch.setattr(scraper, "_assert_public_url", lambda url: None)
+    monkeypatch.setattr(tools, "_assert_public_url", lambda url: None)
 
     def raise_timeout(*a, **k):
         raise requests.exceptions.Timeout()
 
-    monkeypatch.setattr(scraper.requests, "get", raise_timeout)
+    monkeypatch.setattr(tools.requests, "get", raise_timeout)
 
     result = scrape_url.invoke({"url": "http://example.com/slow"})
     assert "timed out" in result.lower()
