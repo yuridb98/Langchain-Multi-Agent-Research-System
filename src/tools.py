@@ -1,39 +1,65 @@
-"""URL scraping tool.
+"""Web search and URL scraping tools used by the Search and Reader agents.
 
-Behavior (fetch + three-strategy extraction cascade) is unchanged from the
-original implementation. What's new is an SSRF guard: the URL to scrape is
-picked by an LLM out of search results, i.e. it is attacker-influenceable
-input. Without a guard, a crafted search result (or a malicious/compromised
-page linked from one) could steer the reader agent into fetching
-``http://169.254.169.254/...`` (cloud metadata endpoints) or an internal
-service, and return the response as "scraped content". The guard resolves
-the hostname and rejects loopback/private/link-local/reserved addresses and
-non-http(s) schemes, and re-validates on every redirect hop.
+scrape_url includes an SSRF guard: the URL it fetches is chosen by an LLM
+out of search results, so it's attacker-influenceable input. Without the
+guard, a crafted search result could steer a fetch at a cloud metadata
+endpoint or an internal service. See _assert_public_url.
 """
 
 from __future__ import annotations
 
 import ipaddress
+import logging
 import re
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 import trafilatura
 from bs4 import BeautifulSoup
 from langchain.tools import tool
 from readability import Document
+from tavily import TavilyClient
 
-from ..config.settings import REQUEST_TIMEOUT, SCRAPE_CHAR_LIMIT
-from ..core.logging import get_logger, truncate
+from .config import REQUEST_TIMEOUT, SCRAPE_CHAR_LIMIT, require_secret
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
+
+# ---- Web search (Tavily) ----
+
+_tavily_client: TavilyClient | None = None
+
+
+def _tavily() -> TavilyClient:
+    global _tavily_client
+    if _tavily_client is None:
+        _tavily_client = TavilyClient(api_key=require_secret("TAVILY_API_KEY"))
+    return _tavily_client
+
+
+@tool
+def web_search(query: str) -> str:
+    """Search the web for recent and reliable information on a topic. Returns titles, URLs and snippets."""
+    logger.info("web_search query=%s", query[:200])
+
+    try:
+        results = _tavily().search(query=query, max_results=5)
+    except Exception as exc:  # Tavily auth/quota/network errors, etc.
+        logger.warning("web_search failed: %s", exc)
+        return f"Search failed: {exc}"
+
+    out = [
+        f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['content'][:300]}\n"
+        for r in results.get("results", [])
+    ]
+    return "\n----\n".join(out) if out else "No search results found."
+
+
+# ---- URL scraping ----
 
 _ALLOWED_SCHEMES = {"http", "https"}
 _MAX_REDIRECTS = 5
-
 _STRIP_TAGS = ["script", "style", "nav", "footer", "header", "aside", "form"]
-
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -90,7 +116,7 @@ def _safe_get(url: str) -> requests.Response:
             next_url = response.headers.get("Location")
             if not next_url:
                 break
-            current_url = requests.compat.urljoin(current_url, next_url)
+            current_url = urljoin(current_url, next_url)
             continue
         response.raise_for_status()
         return response
@@ -122,7 +148,7 @@ def _extract(html: str) -> str | None:
 @tool
 def scrape_url(url: str) -> str:
     """Scrape and extract clean readable content from a URL. Uses multiple extraction strategies for better reliability."""
-    logger.info("scrape_url url=%s", truncate(url, 200))
+    logger.info("scrape_url url=%s", url[:200])
 
     try:
         response = _safe_get(url)

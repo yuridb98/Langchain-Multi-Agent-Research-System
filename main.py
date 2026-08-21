@@ -8,13 +8,13 @@ Example:
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 
-from src.config.models import AGENT_DEFAULTS, CHEAP_MODELS
-from src.core.logging import get_logger
-from src.pipeline.pipeline import run_research_pipeline
+from src.config import AGENT_DEFAULTS, CHEAP_MODELS
+from src.pipeline import run_research_pipeline
 
-logger = get_logger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(name)s: %(message)s")
 
 
 def _print_event(step: str, status: str) -> None:

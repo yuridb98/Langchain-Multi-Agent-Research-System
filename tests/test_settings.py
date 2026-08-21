@@ -1,7 +1,6 @@
 import pytest
 
-from src.config.settings import get_secret, require_secret
-from src.core.errors import ConfigError
+from src.config import ConfigError, get_secret, require_secret
 
 
 def test_get_secret_reads_from_environment(monkeypatch):

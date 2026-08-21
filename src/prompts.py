@@ -1,10 +1,4 @@
-"""Prompt templates for all four agents/chains.
-
-Wording for the writer and critic prompts is unchanged from the original
-implementation. The search and reader ReAct agents previously had no system
-prompt at all (only an ad-hoc human message built by the caller) which made
-their tool-use behavior inconsistent -- system prompts were added for both.
-"""
+"""Prompt templates for all four agents/chains."""
 
 from __future__ import annotations
 

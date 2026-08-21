@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from src.config.models import ALLOWED_MODEL_IDS
-from src.pipeline import pipeline as pipeline_module
-from src.pipeline.pipeline import run_research_pipeline
+from src import pipeline as pipeline_module
+from src.config import ALLOWED_MODEL_IDS
+from src.pipeline import run_research_pipeline
 
 
 @dataclass
