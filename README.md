@@ -61,18 +61,22 @@ The sidebar lets you pick which model each of the four agents uses, from a fixed
 cheap/low-cost models — see `src/config.py`. This allowlist is enforced both in the UI
 and inside the pipeline itself, so it can't be bypassed by tampering with client-side state.
 
-## Deploying to Streamlit Community Cloud
+## Deploying to Render
 
-Don't commit real secrets. Instead, paste your keys into the app's **Secrets** panel
-(Settings → Secrets) in the same format as `.streamlit/secrets.toml.example`:
+The repo includes a [`render.yaml`](render.yaml) blueprint targeting Render's free tier.
 
-```toml
-OPENAI_API_KEY = "sk-..."
-TAVILY_API_KEY = "tvly-..."
-```
+1. Push the repo to GitHub, then in Render: **New → Blueprint**, pick the repo. Render reads
+   `render.yaml` and configures the service automatically.
+2. In the service's **Environment** tab, set `OPENAI_API_KEY` and `TAVILY_API_KEY`. They're
+   declared with `sync: false` in the blueprint, which means Render prompts for the values
+   instead of storing them in the repo — **never commit real keys**.
+3. Deploy. The free tier spins the instance down after ~15 minutes idle, so the first request
+   after a quiet period will be slow (cold start + container boot) — that's expected, not a
+   broken deploy.
 
 The app reads secrets via `st.secrets` first, falling back to environment variables /
-`.env` for local development — see `src/config.py`.
+`.env` for local development — see `src/config.py`. On Render only the environment-variable
+path is used.
 
 ## Development
 

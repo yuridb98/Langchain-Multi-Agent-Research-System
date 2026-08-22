@@ -73,18 +73,16 @@ class ModelSpec:
 
 
 # Keep this to genuinely cheap, fast tiers -- no "pro"/reasoning flagships.
+# Deliberately short: this app is typically deployed publicly on the owner's
+# own API keys (see README "Cost & abuse guards"), so the allowlist itself is
+# the cost ceiling -- fewer, cheaper options means a lower worst case per run.
 CHEAP_MODELS: tuple[ModelSpec, ...] = (
     ModelSpec("gpt-5.4-nano", "GPT-5.4 Nano", "Cheapest and fastest — good default"),
     ModelSpec("gpt-5.4-mini", "GPT-5.4 Mini", "Best quality in the cheap tier"),
     ModelSpec("gpt-5-nano", "GPT-5 Nano", "Previous generation, very cheap"),
-    ModelSpec("gpt-5-mini", "GPT-5 Mini", "Previous generation, balanced"),
-    ModelSpec("gpt-4.1-mini", "GPT-4.1 Mini", "Non-reasoning, low latency"),
-    ModelSpec("gpt-4.1-nano", "GPT-4.1 Nano", "Non-reasoning, cheapest 4.x"),
-    ModelSpec("gpt-4o-mini", "GPT-4o Mini", "Legacy fallback"),
 )
 
 ALLOWED_MODEL_IDS: frozenset[str] = frozenset(m.id for m in CHEAP_MODELS)
-_BY_ID: dict[str, ModelSpec] = {m.id: m for m in CHEAP_MODELS}
 
 AGENT_NAMES: tuple[str, ...] = ("search", "reader", "writer", "critic")
 
@@ -100,10 +98,6 @@ PRESETS: dict[str, dict[str, str]] = {
     "Cheapest": {agent: "gpt-5.4-nano" for agent in AGENT_NAMES},
     "Balanced": dict(AGENT_DEFAULTS),
 }
-
-
-def model_spec(model_id: str) -> ModelSpec | None:
-    return _BY_ID.get(model_id)
 
 
 def resolve_model(agent: str, requested: str | None) -> str:
