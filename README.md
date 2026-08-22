@@ -7,9 +7,6 @@ A small multi-agent research assistant built on LangChain / LangGraph:
 3. **Writer Chain** — drafts a structured research report from the gathered material.
 4. **Critic Chain** — reviews and scores the report.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a full breakdown of the design and the reasoning
-behind it.
-
 Available as a Streamlit UI (`app.py`) and a CLI (`main.py`), both built on the same
 `run_research_pipeline` implementation in `src/pipeline.py`.
 

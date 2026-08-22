@@ -221,3 +221,6 @@ __marimo__/
 
 # Claude Code local settings (project-local, not part of the published project)
 .claude/
+
+# Personal design notes, not meant to be published
+ARCHITECTURE.md
