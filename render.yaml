@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: researcher-agent
+    name: researcheragent-yuridb98
     runtime: python
     plan: free
     region: frankfurt
